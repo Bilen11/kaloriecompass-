@@ -1,1 +1,286 @@
 
+
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>KalorieCompass PRO - Master Edition</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 15px; background: #121212; color: #ffffff; max-width: 500px; margin: auto; box-sizing: border-box; }
+        .dashboard { background: #1e272e; color: white; padding: 20px; border-radius: 15px; text-align: center; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .card { background: #2f3640; padding: 15px; margin-bottom: 15px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
+        h1, h2, h3 { margin-top: 0; color: #4cd137; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0; }
+        .btn { padding: 12px; border: none; border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold; font-size: 0.95rem; background: #4cd137; color: #121212; transition: 0.2s; }
+        .btn:active { background: #44bd32; }
+        .btn-orange { background: #e1b12c; color: #121212; }
+        .btn-blue { background: #00a8ff; color: white; }
+        input, select { width: 100%; padding: 10px; margin: 5px 0; border-radius: 6px; border: 1px solid #718093; background: #121212; color: white; box-sizing: border-box; }
+        .progress-bar { background: #718093; border-radius: 10px; height: 15px; overflow: hidden; margin: 10px 0; }
+        .progress-fill { background: #4cd137; height: 100%; width: 0%; transition: width 0.3s; }
+        .badge { background: #e1b12c; color: #121212; padding: 3px 8px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; display: inline-block; }
+        .water-flex { display: flex; justify-content: space-between; margin-top: 10px; }
+        .water-bottle { font-size: 2rem; cursor: pointer; opacity: 0.3; transition: 0.2s; }
+        .water-bottle.active { opacity: 1; transform: scale(1.1); }
+    </style>
+</head>
+<body>
+
+<div class="dashboard">
+    <div style="display:flex; justify-content: space-between; align-items: center;">
+        <span id="langBadge" class="badge">DK</span>
+        <span id="planBadge" class="badge" style="background:#718093; color:white;">Gratis plan</span>
+    </div>
+    <h1 style="margin:10px 0 5px 0;">KalorieCompass</h1>
+    <p style="margin:0; opacity:0.8;">Budget: <span id="budgetDisplay">1537</span> kcal | Tilbage: <span id="leftDisplay">1537</span> kcal</p>
+    <h2 style="font-size: 2.2rem; margin: 10px 0; color:#fff;"><span id="totalKcal">0</span> <span style="font-size:1rem; opacity:0.5;">kcal</span></h2>
+    <div class="progress-bar"><div id="progressBar" class="progress-fill"></div></div>
+    <div id="fastingTimer" style="font-weight:bold; color:#e1b12c;">Faste (16:8): <span id="timer">Klar</span></div>
+</div>
+
+<div class="card">
+    <h3>Dagens Aktivitet & Vand</h3>
+    <div class="grid">
+        <button class="btn btn-orange" onclick="addSteps(5000)">+5.000 skridt</button>
+        <button class="btn btn-orange" onclick="addSteps(10000)">+10.000 skridt</button>
+    </div>
+    <p style="margin:5px 0;">Stjerner optjent: <strong id="starDisplay" style="color:#e1b12c;">0 ⭐</strong></p>
+    <p style="font-size:0.85rem; opacity:0.7;">Milepæle: <span id="milepælText">Ingen endnu</span></p>
+    
+    <label style="display:block; margin-top:15px;">Vandindtag (4 flasker á 0,5L):</label>
+    <div class="water-flex">
+        <span class="water-bottle" id="w1" onclick="toggleWater(1)">🍼</span>
+        <span class="water-bottle" id="w2" onclick="toggleWater(2)">🍼</span>
+        <span class="water-bottle" id="w3" onclick="toggleWater(3)">🍼</span>
+        <span class="water-bottle" id="w4" onclick="toggleWater(4)">🍼</span>
+    </div>
+</div>
+
+<div class="card">
+    <h3>Profil & Beregninger (Mifflin)</h3>
+    <select id="langSelect" onchange="changeLanguage()">
+        <option value="dk">Dansk (DK)</option>
+        <option value="en">English (EN)</option>
+    </select>
+    <div class="grid">
+        <input type="number" id="profAge" placeholder="Alder" value="32">
+        <input type="number" id="profHeight" placeholder="Højde (cm)" value="180">
+    </div>
+    <input type="number" id="profWeight" placeholder="Vægt (kg)" value="80" oninput="syncWeightInput()">
+    <button class="btn" onclick="runMifflin()">Genberegn Budget</button>
+</div>
+
+<div class="card">
+    <h3>Restaurant & AI Madscanner</h3>
+    <input type="number" id="restKcal" placeholder="Estimeret måltid (kcal)" inputmode="numeric">
+    <button class="btn btn-blue" onclick="logRestaurant()">Log med 15% AI-Buffer</button>
+    <div style="margin-top:15px; border:2px dashed #718093; padding:10px; text-align:center; border-radius:8px;">
+        <label style="cursor:pointer; display:block;">
+            📸 Scan måltid (Hånd-metode)<br><span style="font-size:0.8rem; opacity:0.6;">Vurderer volumen ud fra din hånd</span>
+            <input type="file" accept="image/*" style="display:none;" onchange="triggerHandScan()">
+        </label>
+    </div>
+</div>
+
+<div class="card">
+    <h3>Coach & Sukker/Smør-omregner</h3>
+    <select id="coachPersona">
+        <option value="ven">Bedste Ven (Mild)</option>
+        <option value="militær">Militær-træner (Kontant)</option>
+    </select>
+    <div class="grid">
+        <button class="btn btn-orange" onclick="logSnack('Slik/Kage', 350)">Log Slik/Kage</button>
+        <button class="btn btn-orange" onclick="logSnack('Romkugle', 400)">Log Romkugle</button>
+    </div>
+    <p style="margin:5px 0; font-size:0.9rem;">Svarende til: <strong id="sugarSugar" style="color:#e1b12c;">0 🟥 sukkertern</strong></p>
+    <button class="btn btn-blue" onclick="startFasting()">Aktivér 16:8 Faste</button>
+</div>
+
+<div class="card" style="border: 1px solid #e1b12c;">
+    <h3>VIP Premium Aktivering</h3>
+    <input type="email" id="vipEmail" placeholder="Indtast din VIP e-mail">
+    <button class="btn btn-orange" onclick="activateVIP()">Aktivér Premium</button>
+</div>
+
+<div class="card">
+    <h3>Vægt-historik mod mållinje (63 kg)</h3>
+    <canvas id="weightChart" style="width:100%; height:180px;"></canvas>
+</div>
+
+<script>
+    // CENTRAL STATE
+    let state = JSON.parse(localStorage.getItem('compassState')) || {
+        eaten: 0,
+        dailyBudget: 1537,
+        steps: 0,
+        stars: 0,
+        water: 0,
+        weightHistory: [80, 78.5, 77, 75],
+        isPremium: false,
+        lang: 'dk'
+    };
+
+    let chart;
+
+    // SIKKERHEDSBUFFER (+15%)
+    function logRestaurant() {
+        let val = parseInt(document.getElementById('restKcal').value);
+        if (val) {
+            let bufferVal = Math.round(val * 1.15);
+            state.eaten += bufferVal;
+            alert(state.lang === 'dk' ? "AI tilføjede +15% mod skjult fedt. Logget: " + bufferVal + " kcal" : "AI added +15% buffer. Logged: " + bufferVal + " kcal");
+            document.getElementById('restKcal').value = '';
+            updateUI();
+        }
+    }
+
+    // SKRIDT & STJERNER
+    function addSteps(num) {
+        state.steps += num;
+        state.stars += (num / 1000) * 50;
+        updateUI();
+    }
+
+    // VAND-FLASKER
+    function toggleWater(num) {
+        state.water = num;
+        updateUI();
+    }
+
+    // MIFFLIN-ST. JEOR
+    function runMifflin() {
+        let w = parseFloat(document.getElementById('profWeight').value) || 80;
+        let h = parseFloat(document.getElementById('profHeight').value) || 180;
+        let a = parseInt(document.getElementById('profAge').value) || 32;
+        let bmr = (10 * w) + (6.25 * h) - (5 * a) + 5; // Mand (+5)
+        state.dailyBudget = Math.round(bmr * 1.2);
+        updateUI();
+    }
+
+    // HAND SCANNER PREVIEW
+    function triggerHandScan() {
+        alert(state.lang === 'dk' ? "Hånd-reference fundet i billedet! Volumen vurderet til: Normal portion (+450 kcal)." : "Hand reference detected! Volume estimation: Normal portion (+450 kcal).");
+        state.eaten += 450;
+        updateUI();
+    }
+
+    // SNACK-BUDGET & COACH ATTITUDE
+    function logSnack(type, kcal) {
+        state.eaten += kcal;
+        let persona = document.getElementById('coachPersona').value;
+        if (persona === 'militær') {
+            alert("DROP SÅ DET SLIK! Du har lige logget " + kcal + " kcal fra en " + type + "! Kom i gang med de skridt!");
+        } else {
+            alert("Det er helt okay muler, vi finder plads i weekend-budgettet til din " + type + " ❤️");
+        }
+        updateUI();
+    }
+
+    // FASTETIMER (16:8)
+    function startFasting() {
+        let duration = 16 * 60 * 60 * 1000;
+        let endTime = Date.now() + duration;
+        let timerInterval = setInterval(() => {
+            let left = endTime - Date.now();
+            if (left <= 0) {
+                clearInterval(timerInterval);
+                document.getElementById('timer').innerText = "Slut!";
+            } else {
+                document.getElementById('timer').innerText = new Date(left).toISOString().substr(11, 8);
+            }
+        }, 1000);
+    }
+
+    // ADMIN BAGDØR
+    function activateVIP() {
+        let email = document.getElementById('vipEmail').value.trim();
+        if (email === 'urfali_bilal@hotmail.com') {
+            state.isPremium = true;
+            updateUI();
+            alert("VIP PREMIUM STATUS AKTIVERET! Velkommen, Bilal.");
+        } else {
+            alert("Fejl: E-mail ikke godkendt til VIP-bagdør.");
+        }
+    }
+
+    // MULTI-SPROG
+    function changeLanguage() {
+        state.lang = document.getElementById('langSelect').value;
+        updateUI();
+    }
+
+    function syncWeightInput() {
+        let w = parseFloat(document.getElementById('profWeight').value);
+        if(w) {
+            state.weightHistory[state.weightHistory.length - 1] = w;
+            updateChart();
+        }
+    }
+
+    // UPDATE GENERAL UI
+    function updateUI() {
+        document.getElementById('totalKcal').innerText = state.eaten;
+        document.getElementById('budgetDisplay').innerText = state.dailyBudget;
+        
+        let left = state.dailyBudget - state.eaten;
+        document.getElementById('leftDisplay').innerText = left;
+        
+        let pct = Math.min((state.eaten / state.dailyBudget) * 100, 100);
+        document.getElementById('progressBar').style.width = pct + '%';
+        
+        document.getElementById('starDisplay').innerText = state.stars + " ⭐ (Skridt: " + state.steps + ")";
+        
+        // Milepæle tekst
+        if(state.steps >= 15000) document.getElementById('milepælText').innerText = "Atlet 🏆";
+        else if(state.steps >= 10000) document.getElementById('milepælText').innerText = "Sundhedsmål 🍏";
+        else if(state.steps >= 5000) document.getElementById('milepælText').innerText = "Aktiv dag 🚶";
+        else document.getElementById('milepælText').innerText = "Ingen endnu";
+
+        // Vand visning
+        for(let i=1; i<=4; i++) {
+            document.getElementById('w'+i).classList.toggle('active', state.water >= i);
+        }
+
+        // Sukkertern-beregner
+        let cubes = Math.round(state.eaten / 20); 
+        document.getElementById('sugarSugar').innerText = cubes + " 🟥 sukkertern";
+
+        // VIP badges
+        document.getElementById('planBadge').innerText = state.isPremium ? "PREMIUM VIP" : "Gratis plan";
+        document.getElementById('planBadge').style.background = state.isPremium ? "#e1b12c" : "#718093";
+        document.getElementById('planBadge').style.color = state.isPremium ? "#121212" : "white";
+        document.getElementById('langBadge').innerText = state.lang.toUpperCase();
+
+        localStorage.setItem('compassState', JSON.stringify(state));
+    }
+
+    // DRAW CHART
+    function updateChart() {
+        const ctx = document.getElementById('weightChart').getContext('2d');
+        if (chart) chart.destroy();
+        chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Uge 1', 'Uge 2', 'Uge 3', 'Uge 4 (Nu)'],
+                datasets: [
+                    { label: 'Min Vægt (kg)', data: state.weightHistory, borderColor: '#4cd137', tension: 0.1, fill: false },
+                    { label: 'Mål (63 kg)', data: [63, 63, 63, 63], borderColor: '#e1b12c', borderDash: [5, 5], fill: false }
+                ]
+            },
+            options: {
+                responsive: true,
+                scales: { y: { min: 60, max: 90 } }
+            }
+        });
+    }
+
+    // INITIALIZE
+    document.getElementById('langSelect').value = state.lang;
+    updateUI();
+    updateChart();
+</script>
+
+</body>
+</html>
