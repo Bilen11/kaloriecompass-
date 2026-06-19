@@ -2,38 +2,30 @@
 <html lang="da">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KalorieKompas</title>
-    <link rel="manifest" href="manifest.json">
     <style>
-        body { font-family: sans-serif; padding: 20px; background-color: #f4f4f9; text-align: center; }
-        .container { max-width: 400px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        input, button { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 5px; }
-        button { background-color: #007bff; color: white; border: none; cursor: pointer; }
+        body { font-family: sans-serif; text-align: center; padding: 20px; }
+        .container { max-width: 400px; margin: auto; border: 1px solid #ccc; padding: 20px; border-radius: 8px; }
+        input, button { width: 100%; padding: 10px; margin: 10px 0; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <h1>KalorieKompas</h1>
-    <input type="number" id="calories" placeholder="Indtast kalorier">
-    <button onclick="addCalories()">Tilføj til dagens total</button>
+    <input type="number" id="kalorier" placeholder="Indtast kalorier">
+    <button onclick="tilfojKalorier()">Tilføj til dagens total</button>
     <h2>Total: <span id="total">0</span> kcal</h2>
 </div>
 
 <script>
-    // Offline-funktion
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js');
-    }
-
-    // Beregner-funktion
     let total = 0;
-    function addCalories() {
-        let val = parseInt(document.getElementById('calories').value);
-        if (!isNaN(val)) {
-            total += val;
+    function tilfojKalorier() {
+        let input = document.getElementById('kalorier').value;
+        if (input !== "") {
+            total += parseInt(input);
             document.getElementById('total').innerText = total;
+            document.getElementById('kalorier').value = "";
         }
     }
 </script>
